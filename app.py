@@ -1,29 +1,33 @@
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Port to Warehouse Mapper", layout="wide")
 
 st.title("Port to Warehouse Mapper")
 
-uploaded_file = st.file_uploader("Upload CSV with Port Coordinates and Warehouse Zip (Lat in A, Lon in B, Warehouse Zip in C)", type="csv")
+uploaded_file = st.file_uploader(
+    "Upload CSV with Port Coordinates and Warehouse Zip (Lat in A, Lon in B, Warehouse Zip in C)",
+    type=["csv", "xlsx"]
+)
 
 if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
-    
+    # Handle CSV or Excel
+    if uploaded_file.name.endswith(".csv"):
+        df = pd.read_csv(uploaded_file)
+    else:
+        df = pd.read_excel(uploaded_file)
+
     if df.shape[1] < 3:
-        st.error("CSV must have at least three columns: Latitude, Longitude, Warehouse Zip Code.")
+        st.error("File must have at least three columns: Latitude, Longitude, Warehouse Zip Code.")
     else:
         df.columns = ["Latitude", "Longitude", "WarehouseZip"] + list(df.columns[3:])  # Ensure naming
-        
-        # Let user pick colors for each port
-        st.subheader("Customize Port Colors")
-        colors = []
-        for i in range(len(df)):
-            color = st.color_picker(f"Pick color for Port {i+1} (Lat: {df['Latitude'][i]}, Lon: {df['Longitude'][i]}, Warehouse: {df['WarehouseZip'][i]})", "#FF0000")
-            rgb = tuple(int(color.lstrip("#")[j:j+2], 16) for j in (0, 2, 4))
-            colors.append(rgb)
-        df["color"] = colors
+
+        # Auto-generate distinct colors
+        cmap = plt.cm.get_cmap("tab20", len(df))
+        df["color"] = [list((cmap(i)[:3])) for i in range(len(df))]
+        df["color"] = df["color"].apply(lambda x: [int(v*255) for v in x])  # scale to 0-255
 
         # Plot using pydeck
         st.subheader("Port Map")
