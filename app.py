@@ -12,19 +12,19 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-    # Load CSV or Excel
+    # Load CSV or Excel (assume no header, columns A-D)
     if uploaded_file.name.endswith(".csv"):
-        df = pd.read_csv(uploaded_file, header=None)  # No header, columns A-D
+        df = pd.read_csv(uploaded_file, header=None)
     else:
         df = pd.read_excel(uploaded_file, header=None)
 
     if df.shape[1] < 4:
         st.error("File must have at least four columns: PortLat, PortLon, WhseLat, WhseLon")
     else:
-        # Map columns to correct names
+        # Map columns
         df.columns = ["PortLat", "PortLon", "WhseLat", "WhseLon"] + list(df.columns[4:])
 
-        # Ensure numeric
+        # Ensure coordinates are floats
         for col in ["PortLat", "PortLon", "WhseLat", "WhseLon"]:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
@@ -33,17 +33,20 @@ if uploaded_file is not None:
         if df.empty:
             st.error("No valid data found.")
         else:
-            # Auto-generate colors
+            # Auto-generate colors for ports
             cmap = plt.cm.get_cmap("tab20", len(df))
             df["color"] = [list((cmap(i)[:3])) for i in range(len(df))]
             df["color"] = df["color"].apply(lambda x: [int(v*255) for v in x])
 
-            # Prepare LineLayer with [lon, lat]
-            line_df = pd.DataFrame({
-                "source": df.apply(lambda row: [row["PortLon"], row["PortLat"]], axis=1),
-                "target": df.apply(lambda row: [row["WhseLon"], row["WhseLat"]], axis=1),
-                "color": df["color"]
-            })
+            # Build LineLayer data as list of dicts
+            line_data = [
+                {
+                    "source": [row["PortLon"], row["PortLat"]],  # [lon, lat]
+                    "target": [row["WhseLon"], row["WhseLat"]], # [lon, lat]
+                    "color": row["color"]
+                }
+                for _, row in df.iterrows()
+            ]
 
             # Map center & zoom
             center_lat = (df["PortLat"].mean() + df["WhseLat"].mean()) / 2
@@ -80,9 +83,9 @@ if uploaded_file is not None:
                     # Lines connecting ports to warehouses
                     pdk.Layer(
                         "LineLayer",
-                        data=line_df,
-                        get_source_position="source",  # [lon, lat]
-                        get_target_position="target",  # [lon, lat]
+                        data=line_data,
+                        get_source_position="source",
+                        get_target_position="target",
                         get_color="color",
                         get_width=2,
                     ),
