@@ -12,7 +12,6 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-    # Load CSV or Excel
     if uploaded_file.name.endswith(".csv"):
         df = pd.read_csv(uploaded_file)
     else:
@@ -28,6 +27,10 @@ if uploaded_file is not None:
         df["color"] = [list((cmap(i)[:3])) for i in range(len(df))]
         df["color"] = df["color"].apply(lambda x: [int(v*255) for v in x])
 
+        # Precompute positions for LineLayer
+        df["source"] = df.apply(lambda row: [row["PortLon"], row["PortLat"]], axis=1)
+        df["target"] = df.apply(lambda row: [row["WhseLon"], row["WhseLat"]], axis=1)
+
         st.subheader("Port to Warehouse Map")
         st.pydeck_chart(pdk.Deck(
             map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
@@ -42,7 +45,7 @@ if uploaded_file is not None:
                 pdk.Layer(
                     "ScatterplotLayer",
                     data=df,
-                    get_position="[PortLon, PortLat]",
+                    get_position="source",
                     get_color="color",
                     get_radius=50000,
                     pickable=True,
@@ -51,7 +54,7 @@ if uploaded_file is not None:
                 pdk.Layer(
                     "ScatterplotLayer",
                     data=df,
-                    get_position="[WhseLon, WhseLat]",
+                    get_position="target",
                     get_color=[0, 0, 0],
                     get_radius=30000,
                     pickable=True,
@@ -60,8 +63,8 @@ if uploaded_file is not None:
                 pdk.Layer(
                     "LineLayer",
                     data=df,
-                    get_source_position="[PortLon, PortLat]",
-                    get_target_position="[WhseLon, WhseLat]",
+                    get_source_position="source",
+                    get_target_position="target",
                     get_color="color",
                     get_width=5,
                 ),
