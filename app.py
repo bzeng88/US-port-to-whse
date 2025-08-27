@@ -53,7 +53,7 @@ if uploaded_file is not None:
 
             st.subheader("Port to Warehouse Map")
             st.pydeck_chart(pdk.Deck(
-                map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",  # free basemap
+                map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
                 initial_view_state=pdk.ViewState(
                     latitude=center_lat,
                     longitude=center_lon,
@@ -61,22 +61,22 @@ if uploaded_file is not None:
                     pitch=0,
                 ),
                 layers=[
-                    # Ports
+                    # Ports with bigger circles
                     pdk.Layer(
                         "ScatterplotLayer",
                         data=df,
                         get_position=["PortLon", "PortLat"],  # [lon, lat]
                         get_color="color",
-                        get_radius=5000,
+                        get_radius=12000,  # increased from 5000
                         pickable=True,
                     ),
-                    # Warehouses
+                    # Warehouses with bigger circles
                     pdk.Layer(
                         "ScatterplotLayer",
                         data=df,
                         get_position=["WhseLon", "WhseLat"],  # [lon, lat]
                         get_color=[0, 0, 0],
-                        get_radius=3000,
+                        get_radius=8000,  # increased from 3000
                         pickable=True,
                     ),
                     # Lines connecting ports to warehouses
