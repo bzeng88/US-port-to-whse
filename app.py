@@ -67,7 +67,7 @@ if uploaded_file is not None:
                         data=df,
                         get_position=["PortLon", "PortLat"],  # [lon, lat]
                         get_color="color",
-                        get_radius=12000,  # increased from 5000
+                        get_radius=15000,  # increased from 5000
                         pickable=True,
                     ),
                     # Warehouses with bigger circles
@@ -76,7 +76,7 @@ if uploaded_file is not None:
                         data=df,
                         get_position=["WhseLon", "WhseLat"],  # [lon, lat]
                         get_color=[0, 0, 0],
-                        get_radius=8000,  # increased from 3000
+                        get_radius=9000,  # increased from 3000
                         pickable=True,
                     ),
                     # Lines connecting ports to warehouses
