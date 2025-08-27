@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
+import pydeck as pdk
 import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Port to Warehouse Mapper", layout="wide")
@@ -22,59 +22,73 @@ if uploaded_file is not None:
         st.error("File must have at least 4 columns: PortLat, PortLon, WhseLat, WhseLon")
     else:
         # Map columns
-        df.columns = ["PortLat", "PortLon", "WhseLat", "WhseLon"]
+        df.columns = ["PortLat", "PortLon", "WhseLat", "WhseLon"] + list(df.columns[4:])
 
         # Ensure numeric
-        for col in df.columns:
+        for col in ["PortLat", "PortLon", "WhseLat", "WhseLon"]:
             df[col] = pd.to_numeric(df[col], errors="coerce")
-        df = df.dropna()
+        df = df.dropna(subset=["PortLat", "PortLon", "WhseLat", "WhseLon"])
 
         if df.empty:
             st.error("No valid data found.")
         else:
-            # Generate colors for each port
+            # Auto-generate colors for ports
             cmap = plt.cm.get_cmap("tab20", len(df))
-            df["color"] = [f"rgb({int(c[0]*255)},{int(c[1]*255)},{int(c[2]*255)})" for c in cmap.colors[:len(df)]]
+            df["color"] = [list((cmap(i)[:3])) for i in range(len(df))]
+            df["color"] = df["color"].apply(lambda x: [int(v*255) for v in x])
 
-            # Create Plotly figure
-            fig = go.Figure()
+            # Build LineLayer as list of dicts
+            line_data = [
+                {
+                    "source": [row["PortLon"], row["PortLat"]],
+                    "target": [row["WhseLon"], row["WhseLat"]],
+                    "color": row["color"]
+                }
+                for _, row in df.iterrows()
+            ]
 
-            # Plot ports
-            fig.add_trace(go.Scattermapbox(
-                lat=df["PortLat"],
-                lon=df["PortLon"],
-                mode="markers",
-                marker=dict(size=10, color=df["color"]),
-                name="Ports"
-            ))
-
-            # Plot warehouses
-            fig.add_trace(go.Scattermapbox(
-                lat=df["WhseLat"],
-                lon=df["WhseLon"],
-                mode="markers",
-                marker=dict(size=10, color="black"),
-                name="Warehouses"
-            ))
-
-            # Draw lines for each port → warehouse
-            for i, row in df.iterrows():
-                fig.add_trace(go.Scattermapbox(
-                    lat=[row["PortLat"], row["WhseLat"]],
-                    lon=[row["PortLon"], row["WhseLon"]],
-                    mode="lines",
-                    line=dict(width=2, color=row["color"]),
-                    showlegend=False
-                ))
-
-            # Set layout
-            fig.update_layout(
-                mapbox_style="open-street-map",
-                mapbox_zoom=4,
-                mapbox_center={"lat": df["PortLat"].mean(), "lon": df["PortLon"].mean()},
-                margin={"l":0,"r":0,"t":0,"b":0}
-            )
+            # Map center & zoom
+            center_lat = (df["PortLat"].mean() + df["WhseLat"].mean()) / 2
+            center_lon = (df["PortLon"].mean() + df["WhseLon"].mean()) / 2
 
             st.subheader("Port to Warehouse Map")
-            st.plotly_chart(fig, use_container_width=True)
+            st.pydeck_chart(pdk.Deck(
+                map_style="mapbox://styles/mapbox/light-v9",  # original map style
+                initial_view_state=pdk.ViewState(
+                    latitude=center_lat,
+                    longitude=center_lon,
+                    zoom=4,
+                    pitch=0,
+                ),
+                layers=[
+                    # Ports
+                    pdk.Layer(
+                        "ScatterplotLayer",
+                        data=df,
+                        get_position=["PortLon", "PortLat"],  # [lon, lat]
+                        get_color="color",
+                        get_radius=5000,
+                        pickable=True,
+                    ),
+                    # Warehouses
+                    pdk.Layer(
+                        "ScatterplotLayer",
+                        data=df,
+                        get_position=["WhseLon", "WhseLat"],  # [lon, lat]
+                        get_color=[0, 0, 0],
+                        get_radius=3000,
+                        pickable=True,
+                    ),
+                    # Lines connecting ports to warehouses
+                    pdk.Layer(
+                        "LineLayer",
+                        data=line_data,
+                        get_source_position="source",
+                        get_target_position="target",
+                        get_color="color",
+                        get_width=2,
+                    ),
+                ],
+            ))
+
             st.write("Uploaded Data", df)
