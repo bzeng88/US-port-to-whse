@@ -8,7 +8,7 @@ st.set_page_config(page_title="Port to Warehouse Mapper", layout="wide")
 st.title("Port to Warehouse Mapper")
 
 uploaded_file = st.file_uploader(
-    "Upload CSV with Port Coordinates and Warehouse Zip (Lat in A, Lon in B, Warehouse Zip in C)",
+    "Upload CSV/Excel with Port Coordinates and Warehouse Zip (Lat in A, Lon in B, Warehouse Zip in C)",
     type=["csv", "xlsx"]
 )
 
@@ -29,10 +29,10 @@ if uploaded_file is not None:
         df["color"] = [list((cmap(i)[:3])) for i in range(len(df))]
         df["color"] = df["color"].apply(lambda x: [int(v*255) for v in x])  # scale to 0-255
 
-        # Plot using pydeck
+        # Plot using pydeck with free OSM/Carto basemap
         st.subheader("Port Map")
         st.pydeck_chart(pdk.Deck(
-            map_style="mapbox://styles/mapbox/light-v9",
+            map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
             initial_view_state=pdk.ViewState(
                 latitude=df["Latitude"].mean(),
                 longitude=df["Longitude"].mean(),
