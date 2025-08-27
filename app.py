@@ -28,12 +28,6 @@ if uploaded_file is not None:
         df["color"] = [list((cmap(i)[:3])) for i in range(len(df))]
         df["color"] = df["color"].apply(lambda x: [int(v*255) for v in x])
 
-        # Create line data
-        line_data = pd.DataFrame({
-            "path": [[ [row["PortLon"], row["PortLat"]], [row["WhseLon"], row["WhseLat"]] ] for _, row in df.iterrows()],
-            "color": df["color"]
-        })
-
         st.subheader("Port to Warehouse Map")
         st.pydeck_chart(pdk.Deck(
             map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
@@ -52,7 +46,6 @@ if uploaded_file is not None:
                     get_color="color",
                     get_radius=50000,
                     pickable=True,
-                    tooltip=True
                 ),
                 # Warehouses
                 pdk.Layer(
@@ -62,14 +55,13 @@ if uploaded_file is not None:
                     get_color=[0, 0, 0],
                     get_radius=30000,
                     pickable=True,
-                    tooltip=True
                 ),
-                # Lines connecting port to warehouse
+                # Lines connecting each port to its warehouse
                 pdk.Layer(
                     "LineLayer",
-                    data=line_data,
-                    get_source_position="path[0]",
-                    get_target_position="path[1]",
+                    data=df,
+                    get_source_position="[PortLon, PortLat]",
+                    get_target_position="[WhseLon, WhseLat]",
                     get_color="color",
                     get_width=5,
                 ),
@@ -77,4 +69,3 @@ if uploaded_file is not None:
         ))
 
         st.write("Uploaded Data", df)
-
