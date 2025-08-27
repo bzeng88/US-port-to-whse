@@ -53,7 +53,7 @@ if uploaded_file is not None:
 
             st.subheader("Port to Warehouse Map")
             st.pydeck_chart(pdk.Deck(
-                map_style="mapbox://styles/mapbox/light-v9",  # original map style
+                map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",  # free basemap
                 initial_view_state=pdk.ViewState(
                     latitude=center_lat,
                     longitude=center_lon,
